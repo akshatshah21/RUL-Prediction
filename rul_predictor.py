@@ -95,10 +95,71 @@ class RUL_PREDICTOR:
 
     
     def RTS(self):
-        pass
+    
+        # class member η_cap: list of floats
+        # η_cap_prior: list of floats
+        # η_cap_smoothed: list of floats
+        # class member P: list of floats
+        # P_prior: list of floats
+        # class member / input Q: float
+        # class member / input σ: float
+        # class member i: int
+        # class member current_sample: dict
+        # class member prev_sample: dict
+        # S: list of floats
+
+        # Kalman Filter, forward pass
+        del_y = self.current_sample["md"] - self.prev_sample["md"]
+        del_t = self.current_sample[""]
+
+        self.P_prior.append(self.P[i-1] + self.Q) # P_prior[i] = P[i-1] + Q
+
+        K = del_t**2 * self.P_prior[i] + self.σ**2 * del_t
+
+        self.η_cap.append(
+            self.n_cap[i-1] + 
+            self.P_prior[i] * del_t * np.inv(K) * (del_y - self.η_cap[i-1] * del_t)
+        )
+
+        self.P.append(
+            self.P_prior[i] - 
+            self.P_prior[i] * del_t**2 * np.inv(K) * self.P_prior[i]
+        )
+
+        # Backward iteration
+        S = [0 for _ in range(i)]
+        η_cap_smoothed = [0 for _ in range(i+1)]
+        P_smoothed = [0 for _ in range(i+1)]
+        η_cap_smoothed[-1] = self.η_cap[-1]
+        P_smoothed[-1] = self.P[-1]
+
+        for j in reversed(range(i)):
+
+            S[j] = P[j] * (1 / P_prior[j+1])
+
+            # both of these require smoothed[j+1] (which will be smoothed[i] the first time) So I am assuming η_cap_smoothed[i] = η_cap[i], same for P
+            η_cap_smoothed[j] = self.η_cap[j] + S[j] * (η_cap_smoothed[j+1] - η_cap_prior[j+1])
+            P_smoothed[j] = self.P[j] + S[j] * (P_smoothed[j+1] - P_prior[j+1]) * S[j]
+        
+
+        M = [0 for _ in range(i)]
+        M[-1] = (1-K*del_t) * self.P[i-1]
+
+        expected_η = [0 for _ in range(i)]
+        expected_η_square = [0 for _ in range(i)]
+        expected_η_η_1 = [0 for _ in range(i)]
+
+        for j in range(i-1, 0, -1):
+            M[j] = self.P[j] * S[j-1] + S[j] * (M[j+1] - self.P[j]) * S[j-1]
+            expected_η[j] = η_cap_smoothed[j]
+            expected_η_square[j] = η_cap_smoothed[j]**2 + P_smoothed[j]
+            expected_η_η_1[j] = η_cap_smoothed[j] * η_cap_smoothed[j-1] + M[j]            
+            
+        return expected_η, expected_η_square, expected_η_η_1
 
     
-    def KF(self):
+    def KF(self, del_y, del_t):
+        
         pass
 
 
