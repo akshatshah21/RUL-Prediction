@@ -9,7 +9,7 @@ class data_extraction :
         pass
 
     def get_files(self, dir) :
-        files = [file for file in os.listdir(dir) if 'acc' in file]
+        files = [file for file in sorted(os.listdir(dir)) if 'acc' in file]
         return files
 
     def get_data(self, dir) :
@@ -21,45 +21,43 @@ class data_extraction :
             # i+=1
             df = pd.read_csv(f'{dir}/{file}', header=None)
             df = df.drop(4, axis=1)
-            data_list += df.values.tolist()
+
+            for i in range(0, len(df), 100) :
+                obs = df.iloc[i:i+100, 4].to_numpy()
+                max = np.max(obs)
+                data_list.append(max)
+            
         data = np.array(data_list)
-        # print(data.shape)
+        print(data.shape)
+        return data
+
+    def get_data(self, dir) :
+        data_list = []
+        files = self.get_files(dir)
+        # i=0
+        for file in files :
+            # print(i)
+            # i+=1
+            df = pd.read_csv(f'{dir}/{file}', header=None)
+            df = df.drop(4, axis=1)
+            df = df.iloc[::100, :]
+            data_list += df.values.tolist()
+            
+        data = np.array(data_list)
+        print(data.shape)
         return data
 
 
-
 d = data_extraction()
-data = d.get_data(r'./dataset/Learning_set/Bearing1_1/')
+data = d.get_data(r'../dataset/Learning_set/Bearing1_1/')
 
-a = data[:, 4].reshape(-1, 1)
-# a = np.array([1,2,3,4,5,6])
-tdf = time_domain_features()
+# a = data[:, 4].reshape(-1, 1)
+a = data.reshape(-1, 1)
 
-max = tdf.running_max(a)
-min = tdf.running_min(a)
+res = time_domain_features(a)
 
-abs_mean = tdf.running_abs_mean(a)
-mean = tdf.running_mean(a)
-
-rms = tdf.running_rms(a)
-smr = tdf.running_smr(a)
-
-peaktopeak = tdf.running_peaktopeak(a)
-stddev = tdf.running_stddev(a)
-
-kurtosis = tdf.running_kurtosis(a)
-kurtosisfactor = tdf.running_kurtosisfactor(a)
-
-waveformfactor = tdf.running_waveformfactor(a)
-crestfactor = tdf.running_crestfactor(a)
-impactfactor = tdf.running_impactfactor(a)
-clearancefactor = tdf.running_clearancefactor(a)
-
-res = np.concatenate((max, min, abs_mean, mean, rms, smr, peaktopeak, 
-                      stddev, kurtosis, kurtosisfactor, waveformfactor, crestfactor,
-                      impactfactor, clearancefactor), axis=1)
+# np.save('time_domain_features_2.npy', res)
 print(res.shape)
-
 
 
 
