@@ -85,7 +85,36 @@ class RUL_PREDICTOR:
 
         pass
 
-    
+    def EM(self, y, t, i):
+    # initial values of theta
+        eta_bar = 0
+        var_of_eta = 0
+        Q = 0
+        σ_square = 0
+        for k in range(self.iter):
+            expected_η, expected_η_square, expected_η_η_1 = RTS()
+            #E part
+            t1 = np.log(var_of_eta)
+            t2 = (expected_η_square[0] - 2*expected_η[0]*eta_bar + eta_bar**2 )/var_of_eta
+            t3 = 0
+            t4 = 0
+            for j in range(1, i+1):
+                t3+= np.log(Q) + (expected_η_square[j] - 2*expected_η_η_1[j] + expected_η_square[j-1])/Q
+                t4+= np.log(sigma_square) + ((y[j]-y[j-1])**2 - 2*expected_η[j-1]*(y[j]-y[j-1])*(t[j]-t[j-1]) + ((t[j]-t[j-1])**2)*expected_η_square[j-1])/(sigma_square*(t[j]-t[j-1]))
+            likelihood = -t1 - t2 - t3 - t4
+            print("Likelihood: ", likelihood)
+            #M part 
+            f3 = 0
+            f4 = 0
+            for j in range(1, i+1):
+                f3+= (expected_η_square[j] - 2*expected_η_η_1[j] + expected_η_square[j-1])
+                f4+= ((y[j]-y[j-1])**2 - 2*expected_η[j-1]*(y[j]-y[j-1])*(t[j]-t[j-1]) + ((t[j]-t[j-1])**2)*expected_η_square[j-1])/(t[j]-t[j-1])
+            
+            eta_bar = expected_η[0]
+            var_of_eta = expected_η_square[0] - expected_η[0]**2
+            Q = f3
+            sigma_square = f4    
+        
     def EM(self):
         '''
         utilize self.samples, self.y_list, self.theta, self.theta_difference_threshold and set new theta
@@ -107,7 +136,7 @@ class RUL_PREDICTOR:
         # class member current_sample: dict
         # class member prev_sample: dict
         # S: list of floats
-
+        # η_cap_0 = [normal distribution(eta_0_bar, var_eta_0)]  
         # Kalman Filter, forward pass
         del_y = self.current_sample["md"] - self.prev_sample["md"]
         del_t = self.current_sample[""]
