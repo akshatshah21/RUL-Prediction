@@ -2,9 +2,11 @@ import numpy as np
 from numpy.core.fromnumeric import var
 
 # from feature_utils import *       # functions for calculating 14 features
-# 
+#
 
-# μ σ η Σ 
+# μ σ η Σ
+
+
 class RULPredictor:
     '''
 
@@ -19,13 +21,12 @@ class RULPredictor:
         self.y_list = None          # index of those who cross md_threshold
 
         self.theta = {'η0_bar': 0, 'V_η0': 1, 'Q': 0, 'σ^2': 0}
-        
+
         self.theta_difference_threshold = None  # for convergence test in EM
 
         # current_sample = {md': , 't_i': , 'η_i': , 'η0_bar': , 'V_η0': , 'σ^2': , 'Q': , 'η_i_cap': , 'V_i|i': }
         # prev_sample = {md': , 't_i': , 'η_i-1': , 'η0_bar': , 'V_η0': , 'σ^2': , 'Q': , 'η_i-1_cap': , 'V_i-1|i-1': }
         pass
-
 
     def train_data(self, train_folder_list):
         '''
@@ -40,7 +41,6 @@ class RULPredictor:
         # use static variables for storing features / data / md values
         pass
 
-
     def get_features(self, data):
         '''
         parameters: 
@@ -49,10 +49,9 @@ class RULPredictor:
         returns:
         feature vector 'dictionary' (length 14)
         '''
-       
+
         pass
 
-    
     def get_mahalonobis_distance(self, feature_vector, mean_vector):
         '''
         parameters:
@@ -64,7 +63,6 @@ class RULPredictor:
         '''
 
         pass
-
 
     def test_data(self, test_folder_list):
         '''
@@ -86,44 +84,48 @@ class RULPredictor:
 
         pass
 
-    def EM(self, y, t, i):
-    # initial values of theta
-        eta_bar = 0
-        var_of_eta = 0
-        Q = 0
-        σ_square = 0
-        for k in range(self.iter):
-            expected_η, expected_η_square, expected_η_η_1 = self.RTS(η_0_bar=eta_bar, P_0=var_of_eta, Q=Q, σ_square=σ_square)
-            #E part
-            t1 = np.log(var_of_eta)
-            t2 = (expected_η_square[0] - 2*expected_η[0]*eta_bar + eta_bar**2 )/var_of_eta
-            t3 = 0
-            t4 = 0
-            for j in range(1, i+1):
-                t3+= np.log(Q) + (expected_η_square[j] - 2*expected_η_η_1[j] + expected_η_square[j-1])/Q
-                t4+= np.log(sigma_square) + ((y[j]-y[j-1])**2 - 2*expected_η[j-1]*(y[j]-y[j-1])*(t[j]-t[j-1]) + ((t[j]-t[j-1])**2)*expected_η_square[j-1])/(sigma_square*(t[j]-t[j-1]))
-            likelihood = -t1 - t2 - t3 - t4
-            print("Likelihood: ", likelihood)
-            #M part 
-            f3 = 0
-            f4 = 0
-            for j in range(1, i+1):
-                f3+= (expected_η_square[j] - 2*expected_η_η_1[j] + expected_η_square[j-1])
-                f4+= ((y[j]-y[j-1])**2 - 2*expected_η[j-1]*(y[j]-y[j-1])*(t[j]-t[j-1]) + ((t[j]-t[j-1])**2)*expected_η_square[j-1])/(t[j]-t[j-1])
-            
-            eta_bar = expected_η[0]
-            var_of_eta = expected_η_square[0] - expected_η[0]**2
-            Q = f3
-            sigma_square = f4    
-        
     def EM(self):
         '''
         utilize self.samples, self.y_list, self.theta, self.theta_difference_threshold and set new theta
         '''
+        # initial values of theta
+        η_0_bar = 0
+        P_0 = 0
+        Q = 0
+        σ_square = 0
+        for k in range(self.iter):
+            expected_η, expected_η_square, expected_η_η_1 = self.RTS(
+                η_0_bar=η_0_bar, P_0=P_0, Q=Q, σ_square=σ_square)
+            # E part
+            t1 = np.log(P_0)
+            t2 = (expected_η_square[0] - 2 *
+                  expected_η[0]*η_0_bar + η_0_bar**2)/P_0
+            t3 = 0
+            t4 = 0
+            for j in range(1, self.i+1):
+                del_y = self.samples[j].md - self.samples[j-1].md
+                del_t = self.samples[j].t - self.samples[j-1].t
+                t3 += np.log(Q) + (expected_η_square[j] - 2 *
+                                   expected_η_η_1[j] + expected_η_square[j-1])/Q
+                t4 += np.log(σ_square) + (del_y**2 - 2*expected_η[j-1]*del_y*del_t + (del_t**2)*expected_η_square[j-1])/(σ_square*del_t)
+            likelihood = -t1 - t2 - t3 - t4
+            print("Likelihood: ", likelihood)
+            # M part
+            f3 = 0
+            f4 = 0
+            for j in range(1, self.i+1):
+                del_y = self.samples[j].md - self.samples[j-1].md
+                del_t = self.samples[j].t - self.samples[j-1].t
+                f3 += (expected_η_square[j] - 2 *
+                       expected_η_η_1[j] + expected_η_square[j-1])
+                f4 += (del_y**2 - 2*expected_η[j-1]*del_y*del_t + (del_t**2)*expected_η_square[j-1])/del_t
 
-        pass
+            η_0_bar = expected_η[0]
+            P_0 = expected_η_square[0] - expected_η[0]**2
+            Q = f3
+            σ_square = f4
+        return η_0_bar, P_0, Q, σ_square
 
-    
     def RTS(self, η_0_bar, P_0, Q, σ_square):
         '''
         Rauch-Tung-Striebel Smoother
@@ -140,7 +142,7 @@ class RULPredictor:
         # i: int, denoting latest sample number
         # samples: list of samples (dicts) observed yet
 
-        η_cap = [np.random.rand()* P_0**0.5 + η_0_bar]
+        η_cap = [np.random.rand() * P_0**0.5 + η_0_bar]
         P = [P_0]
 
         # Kalman Filter, forward pass
@@ -154,12 +156,12 @@ class RULPredictor:
             K = del_t**2 * P_prior[j] + σ_square * del_t
 
             η_cap.append(
-                η_cap[j-1] + 
+                η_cap[j-1] +
                 P_prior[j] * del_t * (1/K) * (del_y - η_cap[j-1] * del_t)
             )
 
             P.append(
-                P_prior[j] - 
+                P_prior[j] -
                 P_prior[j] * del_t**2 * (1/K) * P_prior[j]
             )
 
@@ -175,12 +177,15 @@ class RULPredictor:
 
         for j in range(self.i-1, -1, -1):
             S[j] = P[j] * (1 / P_prior[j+1])
-            η_cap_smoothed[j] = η_cap[j] + S[j] * (η_cap_smoothed[j+1] - η_cap[j])
-            P_smoothed[j] = P[j] + S[j] * (P_smoothed[j+1] - P_prior[j+1]) * S[j]
-        
-        del_t = self.samples[self.i].t - self.samples[self.i-1].t # What about when i == 0?
+            η_cap_smoothed[j] = η_cap[j] + S[j] * \
+                (η_cap_smoothed[j+1] - η_cap[j])
+            P_smoothed[j] = P[j] + S[j] * \
+                (P_smoothed[j+1] - P_prior[j+1]) * S[j]
+
+        del_t = self.samples[self.i].t - \
+            self.samples[self.i-1].t  # What about when i == 0?
         M = [0 for _ in range(self.i)]
-        M[-1] = (1-K*del_t) * self.P[self.i-1] # What about when i == 0?
+        M[-1] = (1-K*del_t) * self.P[self.i-1]  # What about when i == 0?
 
         expected_η = [0 for _ in range(self.i)]
         expected_η_square = [0 for _ in range(self.i)]
@@ -188,15 +193,15 @@ class RULPredictor:
 
         for j in range(self.i-1, 0, -1):
             M[j] = P[j] * S[j-1] + S[j] * (M[j+1] - P[j]) * S[j-1]
-            
+
         for j in range(self.i, -1, -1):
             expected_η[j] = η_cap_smoothed[j]
             expected_η_square[j] = η_cap_smoothed[j]**2 + P_smoothed[j]
             if j != 0:
-                expected_η_η_1[j] = η_cap_smoothed[j] * η_cap_smoothed[j-1] + M[j]            
-            
-        return expected_η, expected_η_square, expected_η_η_1
+                expected_η_η_1[j] = η_cap_smoothed[j] * \
+                    η_cap_smoothed[j-1] + M[j]
 
+        return expected_η, expected_η_square, expected_η_η_1
 
     def predict_RUL(self):
         '''
