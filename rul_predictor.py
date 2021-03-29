@@ -151,9 +151,12 @@ class RUL_PREDICTOR:
 
         for j in range(i-1, 0, -1):
             M[j] = self.P[j] * S[j-1] + S[j] * (M[j+1] - self.P[j]) * S[j-1]
+            
+        for j in range(i, -1, -1):
             expected_η[j] = η_cap_smoothed[j]
             expected_η_square[j] = η_cap_smoothed[j]**2 + P_smoothed[j]
-            expected_η_η_1[j] = η_cap_smoothed[j] * η_cap_smoothed[j-1] + M[j]            
+            if j is not 0:
+                expected_η_η_1[j] = η_cap_smoothed[j] * η_cap_smoothed[j-1] + M[j]            
             
         return expected_η, expected_η_square, expected_η_η_1
 
