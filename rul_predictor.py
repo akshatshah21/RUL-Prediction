@@ -1,10 +1,11 @@
 import numpy as np
+from numpy.core.fromnumeric import var
 
 # from feature_utils import *       # functions for calculating 14 features
 # 
 
 # μ σ η Σ 
-class RUL_PREDICTOR:
+class RULPredictor:
     '''
 
     '''
@@ -92,7 +93,7 @@ class RUL_PREDICTOR:
         Q = 0
         σ_square = 0
         for k in range(self.iter):
-            expected_η, expected_η_square, expected_η_η_1 = RTS()
+            expected_η, expected_η_square, expected_η_η_1 = self.RTS(η_0_bar=eta_bar, P_0=var_of_eta, Q=Q, σ_square=σ_square)
             #E part
             t1 = np.log(var_of_eta)
             t2 = (expected_η_square[0] - 2*expected_η[0]*eta_bar + eta_bar**2 )/var_of_eta
@@ -123,76 +124,78 @@ class RUL_PREDICTOR:
         pass
 
     
-    def RTS(self):
-    
-        # class member η_cap: list of floats
-        # η_cap_prior: list of floats
-        # η_cap_smoothed: list of floats
-        # class member P: list of floats
-        # P_prior: list of floats
-        # class member / input Q: float
-        # class member / input σ: float
-        # class member i: int
-        # class member current_sample: dict
-        # class member prev_sample: dict
-        # S: list of floats
-        # η_cap_0 = [normal distribution(eta_0_bar, var_eta_0)]  
+    def RTS(self, η_0_bar, P_0, Q, σ_square):
+        '''
+        Rauch-Tung-Striebel Smoother
+        Involves Kalman Filter as forward iteration, and the backward iteration calculates smoothened mean and variance.
+        Calculates E(η_j), E(η_j^2) and E(η_j * η_j-1) for use in the Expection Maximization algorithm (the RULPredictor.EM method)
+        ----------
+        Parameters:
+        η_0_bar: Initial mean of drift
+        P_0: Initial variance of drift
+        Q: Process covariance (variance of the error term added to drift)
+        σ_square: Square of the diffusion coefficient
+        '''
+        # Assuming following class members:
+        # i: int, denoting latest sample number
+        # samples: list of samples (dicts) observed yet
+
+        η_cap = [np.random.rand()* P_0**0.5 + η_0_bar]
+        P = [P_0]
+
         # Kalman Filter, forward pass
-        del_y = self.current_sample["md"] - self.prev_sample["md"]
-        del_t = self.current_sample[""]
+        P_prior = []
+        for j in range(1, self.i+1):
+            del_y = self.samples[j].md - self.samples[j-1].md
+            del_t = self.samples[j].t - self.samples[j-1].t
 
-        self.P_prior.append(self.P[i-1] + self.Q) # P_prior[i] = P[i-1] + Q
+            P_prior.append(P[j-1] + Q)
 
-        K = del_t**2 * self.P_prior[i] + self.σ**2 * del_t
+            K = del_t**2 * P_prior[j] + σ_square * del_t
 
-        self.η_cap.append(
-            self.n_cap[i-1] + 
-            self.P_prior[i] * del_t * np.inv(K) * (del_y - self.η_cap[i-1] * del_t)
-        )
+            η_cap.append(
+                η_cap[j-1] + 
+                P_prior[j] * del_t * (1/K) * (del_y - η_cap[j-1] * del_t)
+            )
 
-        self.P.append(
-            self.P_prior[i] - 
-            self.P_prior[i] * del_t**2 * np.inv(K) * self.P_prior[i]
-        )
+            P.append(
+                P_prior[j] - 
+                P_prior[j] * del_t**2 * (1/K) * P_prior[j]
+            )
 
         # Backward iteration
-        S = [0 for _ in range(i)]
-        η_cap_smoothed = [0 for _ in range(i+1)]
-        P_smoothed = [0 for _ in range(i+1)]
-        η_cap_smoothed[-1] = self.η_cap[-1]
-        P_smoothed[-1] = self.P[-1]
+        S = [0 for _ in range(self.i)]
+        η_cap_smoothed = [0 for _ in range(self.i+1)]
+        P_smoothed = [0 for _ in range(self.i+1)]
 
-        for j in reversed(range(i)):
+        # My assumption: η_cap_smoothed[i] = η_cap[i], same for P_smoothed.
+        # Cannot find anything else for this
+        η_cap_smoothed[-1] = η_cap[-1]
+        P_smoothed[-1] = P[-1]
 
+        for j in range(self.i-1, -1, -1):
             S[j] = P[j] * (1 / P_prior[j+1])
-
-            # both of these require smoothed[j+1] (which will be smoothed[i] the first time) So I am assuming η_cap_smoothed[i] = η_cap[i], same for P
-            η_cap_smoothed[j] = self.η_cap[j] + S[j] * (η_cap_smoothed[j+1] - η_cap_prior[j+1])
-            P_smoothed[j] = self.P[j] + S[j] * (P_smoothed[j+1] - P_prior[j+1]) * S[j]
+            η_cap_smoothed[j] = η_cap[j] + S[j] * (η_cap_smoothed[j+1] - η_cap[j])
+            P_smoothed[j] = P[j] + S[j] * (P_smoothed[j+1] - P_prior[j+1]) * S[j]
         
+        del_t = self.samples[self.i].t - self.samples[self.i-1].t # What about when i == 0?
+        M = [0 for _ in range(self.i)]
+        M[-1] = (1-K*del_t) * self.P[self.i-1] # What about when i == 0?
 
-        M = [0 for _ in range(i)]
-        M[-1] = (1-K*del_t) * self.P[i-1]
+        expected_η = [0 for _ in range(self.i)]
+        expected_η_square = [0 for _ in range(self.i)]
+        expected_η_η_1 = [0 for _ in range(self.i)]
 
-        expected_η = [0 for _ in range(i)]
-        expected_η_square = [0 for _ in range(i)]
-        expected_η_η_1 = [0 for _ in range(i)]
-
-        for j in range(i-1, 0, -1):
-            M[j] = self.P[j] * S[j-1] + S[j] * (M[j+1] - self.P[j]) * S[j-1]
+        for j in range(self.i-1, 0, -1):
+            M[j] = P[j] * S[j-1] + S[j] * (M[j+1] - P[j]) * S[j-1]
             
-        for j in range(i, -1, -1):
+        for j in range(self.i, -1, -1):
             expected_η[j] = η_cap_smoothed[j]
             expected_η_square[j] = η_cap_smoothed[j]**2 + P_smoothed[j]
-            if j is not 0:
+            if j != 0:
                 expected_η_η_1[j] = η_cap_smoothed[j] * η_cap_smoothed[j-1] + M[j]            
             
         return expected_η, expected_η_square, expected_η_η_1
-
-    
-    def KF(self, del_y, del_t):
-        
-        pass
 
 
     def predict_RUL(self):
