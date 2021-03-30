@@ -1,3 +1,5 @@
+# Helper functions for 14 time domain features calculation
+
 import numpy as np
 import pandas as pd
 import math
@@ -9,7 +11,6 @@ import time
 EPSILON = 1e-15
 
 def time_domain_features(a) :
-    
     squared_a = np.square(a)
     abs_a = np.absolute(a)
     sqrt_a = np.sqrt(abs_a)
@@ -26,6 +27,7 @@ def time_domain_features(a) :
     t = time.time()
     absmean = np.cumsum(abs_a) / arange_a
     absmean = absmean.reshape(-1, 1)
+    # print(absmean, absmean.shape)
     print("Done: ", time.time() - t)
 
 
@@ -33,6 +35,7 @@ def time_domain_features(a) :
     t = time.time()    
     mean = np.cumsum(a) / arange_a
     mean = mean.reshape(-1, 1)
+    # print('mean',mean.shape)
     print("Done: ", time.time() - t)
 
 
@@ -40,6 +43,7 @@ def time_domain_features(a) :
     t = time.time()
     rms = np.sqrt(np.cumsum(squared_a) / arange_a )
     rms = rms.reshape(-1, 1)
+    # print(rms)
     print("Done: ", time.time() - t)
 
     
@@ -47,6 +51,7 @@ def time_domain_features(a) :
     t = time.time()
     smr = np.square(np.cumsum(sqrt_a) / arange_a )
     smr = smr.reshape(-1, 1)
+    # print(smr)
     print("Done: ", time.time() - t)
 
 
@@ -61,49 +66,33 @@ def time_domain_features(a) :
     t = time.time()
     stddev = np.sqrt( (np.cumsum(squared_a) / arange_a) -  (np.square(np.cumsum(a) / arange_a)) )
     stddev = stddev.reshape(-1, 1)
+    # print(stddev)
     print("Done: ", time.time() - t)
     
 
-    # print("Calculating Kurtosis")
-    # t = time.time()
-    # kurtosis = np.zeros((a.shape[0], 1))
-    # for i in range(a.shape[0]):
-    #     # print(i, 'kurtosis')
-    #     subarr = a[0:i+1]
-    #     # kurtosis[i] = (np.sum((subarr - mean[i]) ** 4)) / (i+1)
-    #     kurtosis[i] = stats.kurtosis(subarr)
-    #     # print(kurtosis[i])
-    #     # if i>5: 
-    #     #     break
-
-    # sub = np.cumsum(a).reshape(-1, 1) - (arange_a.reshape(-1, 1) * mean.reshape(-1, 1)).reshape(-1, 1)
-
-    # a_temp = np.cumsum(a).reshape(-1, 1)
-    # b_temp = arange_a.reshape(-1, 1) * mean.reshape(-1, 1)
-    # sub = (a_temp - b_temp).reshape(-1, 1)
-    # # print(a_temp.shape, b_temp.shape, sub.shape)
-
-    # num = np.power(sub, 4)  # .reshape(-1, 1)
-    # den = arange_a  # .reshape(-1, 1)
-    # kurtosis = num / den
-    # print(kurtosis)
-    # print("Done: ", time.time() - t)
-    
-
-    # kurtosisfactor = kurtosis / (EPSILON + (stddev ** 4))
-
+    print("Calculating Waveform factor")
     waveformfactor =  rms / (EPSILON + absmean)
+    print("Done")
+
+
+    print("Calculating Crest factor")
     crestfactor =  peaktopeak / (EPSILON + rms)
+    print("Done")
+
+
+    print("Calculating Impact factor")
     impactfactor = peaktopeak / (EPSILON + absmean)
+    print("Done")
+
+
+    print("Calculating Clearance factor")
     clearancefactor =  peaktopeak / (EPSILON + rms)
+    print("Done")
 
-    # res = np.concatenate((max, min, absmean, mean, rms, smr, peaktopeak, 
-    #                   stddev, kurtosis, kurtosisfactor, waveformfactor, crestfactor,
-    #                   impactfactor, clearancefactor), axis=1)
-    
+
     res = np.concatenate((max, min, absmean, mean, rms, smr, peaktopeak, 
-                      stddev, waveformfactor, crestfactor,
-                      impactfactor, clearancefactor), axis=1)
+                          stddev, waveformfactor, crestfactor,
+                          mpactfactor, clearancefactor), axis=1)
 
+    
     return res
-
