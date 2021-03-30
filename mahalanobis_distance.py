@@ -19,7 +19,7 @@ class mahalanobis_distance :
         return np.sqrt(md.diagonal())
     
 
-a = np.load('time_domain_features_72l.npy')
+a = np.load('./my_data/time_domain_features_72l_compressed.npz')['arr_0']
 # print(a)
 
 for i in range(a.shape[0]) :
@@ -33,7 +33,7 @@ for i in range(a.shape[0]) :
     print(i)
     distances[i] = md.distance(a[i])
 
-np.save('md_values_72l', distances)
+np.savez_compressed('./my_data/md_values_72l_compressed', distances)
 
 print('mean', np.mean(distances))
 print('stddev', np.std(distances))
@@ -44,5 +44,5 @@ plt.plot(range(1, distances.shape[0]+1), distances, label='md')
 plt.xlabel('samples')
 plt.ylabel('md')
 plt.grid()
-plt.savefig('plot_72l.png')
+plt.savefig('./my_data/plot_72l.png')
 plt.show()

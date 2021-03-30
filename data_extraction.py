@@ -56,7 +56,7 @@ a = data[:, 4].reshape(-1, 1)
 
 res = time_domain_features(a)
 
-np.save('time_domain_features_72l', res)
+np.savez_compressed('./my_data/time_domain_features_72l_compressed.npz', res)
 print(res.shape)
 
 
