@@ -8,7 +8,7 @@ class mahalanobis_distance :
         self.a = a
         self.covariance_matrix = np.cov(a, rowvar=False)
         self.covariance_matrix_inv = np.linalg.inv(self.covariance_matrix)
-        self.mean = np.mean(self.a[:10000], axis=0).reshape(1, -1)
+        self.mean = np.mean(self.a[:], axis=0).reshape(1, -1)
 
     def distance(self, z) :
         z_minus_mean = z - self.mean
@@ -19,7 +19,7 @@ class mahalanobis_distance :
         return np.sqrt(md.diagonal())
     
 
-a = np.load('time_domain_features.npy')
+a = np.load('time_domain_features_72l.npy')
 # print(a)
 
 for i in range(a.shape[0]) :
@@ -33,12 +33,16 @@ for i in range(a.shape[0]) :
     print(i)
     distances[i] = md.distance(a[i])
 
+np.save('md_values_72l', distances)
+
 print('mean', np.mean(distances))
 print('stddev', np.std(distances))
+
+plt.ylim(0, 50)
 plt.plot(range(1, distances.shape[0]+1), distances, label='md')
 
 plt.xlabel('samples')
 plt.ylabel('md')
-plt.legend()
 plt.grid()
+plt.savefig('plot_72l.png')
 plt.show()

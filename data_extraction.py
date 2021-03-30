@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
 import os
-from time_domain_features import time_domain_features
+# from time_domain_features import time_domain_features
+from optimized_tdf import time_domain_features
 
 class data_extraction :
 
@@ -12,24 +13,24 @@ class data_extraction :
         files = [file for file in sorted(os.listdir(dir)) if 'acc' in file]
         return files
 
-    def get_data(self, dir) :
-        data_list = []
-        files = self.get_files(dir)
-        # i=0
-        for file in files :
-            # print(i)
-            # i+=1
-            df = pd.read_csv(f'{dir}/{file}', header=None)
-            df = df.drop(4, axis=1)
+    # def get_data(self, dir) :
+    #     data_list = []
+    #     files = self.get_files(dir)
+    #     # i=0
+    #     for file in files :
+    #         # print(i)
+    #         # i+=1
+    #         df = pd.read_csv(f'{dir}/{file}', header=None)
+    #         df = df.drop(4, axis=1)
 
-            for i in range(0, len(df), 100) :
-                obs = df.iloc[i:i+100, 4].to_numpy()
-                max = np.max(obs)
-                data_list.append(max)
+    #         for i in range(0, len(df), 100) :
+    #             obs = df.iloc[i:i+100, 4].to_numpy()
+    #             max = np.max(obs)
+    #             data_list.append(max)
             
-        data = np.array(data_list)
-        print(data.shape)
-        return data
+    #     data = np.array(data_list)
+    #     print(data.shape)
+    #     return data
 
     def get_data(self, dir) :
         data_list = []
@@ -40,7 +41,7 @@ class data_extraction :
             # i+=1
             df = pd.read_csv(f'{dir}/{file}', header=None)
             df = df.drop(4, axis=1)
-            df = df.iloc[::100, :]
+            df = df.iloc[:, :]
             data_list += df.values.tolist()
             
         data = np.array(data_list)
@@ -51,12 +52,11 @@ class data_extraction :
 d = data_extraction()
 data = d.get_data(r'../dataset/Learning_set/Bearing1_1/')
 
-# a = data[:, 4].reshape(-1, 1)
-a = data.reshape(-1, 1)
+a = data[:, 4].reshape(-1, 1)
 
 res = time_domain_features(a)
 
-# np.save('time_domain_features_2.npy', res)
+np.save('time_domain_features_72l', res)
 print(res.shape)
 
 
