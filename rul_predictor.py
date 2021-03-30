@@ -2,12 +2,13 @@ import pandas as pd
 import numpy as np
 from scipy.special import dawsn
 import pickle
-import os
+import warnings
 import sys
 # from feature_utils import *       # functions for calculating 14 features
 # μ σ η Σ
 
 np.random.seed(42)
+warnings.filterwarnings("error")
 class RULPredictor:
     '''
     # TODO
@@ -21,22 +22,28 @@ class RULPredictor:
 
     def __init__(self, debug=False):
 
-        self.MD_THRESHOLD =9
-        self.w = 16
+        self.MD_THRESHOLD = 9
+        self.degrading = False
+        self.w = 24
 
         # self.samples = [{
         # 'md': ,
         # 't': ,
-        # 'η0_bar': ,
-        # 'V_η0': ,
-        # 'σ_square': ,
-        # 'Q': ,
         # 'η': ,
         # 'V':
         # }]
         self.samples = []
+
+        self.η0_bar = 0
+        self.V_η0 = 1.01
+        self.σ_square = 1.01
+        self.Q = 1.01
+
+        self.η_cap = None
+        self.P = None
+
         self.i = -1
-        self.EM_ITER = 5
+        self.EM_ITER = 5000
         self.V_prior = 0
         self.debug = debug
 
@@ -85,61 +92,45 @@ class RULPredictor:
 
         returns:
         '''
-        def parse_time(x):
-            pass
-
-        def get_files(dir):
-            files = [file for file in sorted(os.listdir(dir)) if 'acc' in file]
-            return files
 
         def get_data(dir):
-            # data = np.array([[32.65616884, 30781378320.0],
-            #                  [31.87692635, 30781378360.0],
-            #                  [32.49983207, 30781378400.0],
-            #                  [47.73417412, 30781378440.0],
-            #                  [54.6600644, 30781378480.0],
-            #                  [53.04537443, 30781378520.0]])
-
             with open("dataset/data_pickle_1", 'rb') as f:
                 data = pickle.load(f)
-                data = data[100:200]
+                # data = data[100:200]
                 if self.debug:
                     print(data.shape)
                     print(data[:10])
-            return data
-
-            data_list = []
-            files = self.get_files(dir)
-            for file in files:
-                df = pd.read_csv(f'{dir}/{file}', header=None)
-                df = df.drop(4, axis=1)
-                data_list += df.values.tolist()
-
-            data = np.array(data_list)
-            # print(data.shape)
-            return data
+            return data[:1000]
 
         test_data = get_data("dataset/test_set/Bearing1_3")
-        # parse time 0 -> time, 1 -> acc
         test_data = test_data[test_data[:, 1] > self.MD_THRESHOLD]
 
 
         for sample in test_data:
-            self.i += 1
-            self.samples.append({
-                "t": sample[0],
-                "md": sample[1],
-                "η0_bar": 0,
-                "V_η0": 1.01,
-                "σ_square": 1.01,
-                "Q": 1.01,
-                "η_cap": 0,
-                "V": 1.01
-            })
+            if not self.degrading and sample[1] > self.MD_THRESHOLD:
+                self.degrading = True
+                print("testing")
+                self.i = 0
+                self.samples.append({
+                    "t": sample[0],
+                    "md": sample[1],
+                    "η_cap": 0,
+                    "V": 1.01
+                })
+                continue
+                
             
-            if self.i > 0:
-                self.samples[self.i]["η0_bar"], self.samples[self.i]["V_η0"], self.samples[self.i]["σ_square"], self.samples[self.i]["Q"] = self.EM()
-
+            if self.degrading and self.i >= 0:
+                self.i += 1
+                
+                self.samples.append({
+                    "t": sample[0],
+                    "md": sample[1],
+                    "η_cap": 0,
+                    "V": 1.01
+                })
+                self.η0_bar, self.V_η0, self.σ_square, self.Q = self.EM()
+                '''
                 v = np.random.rand() * self.samples[self.i]["Q"]**0.5
 
                 del_t = self.samples[self.i]["t"] - self.samples[self.i-1]["t"]
@@ -148,21 +139,22 @@ class RULPredictor:
 
                 self.samples[self.i]["η_cap"] = self.samples[self.i-1]["η_cap"] + v
 
-                # self.samples[self.i]["md"] = self.samples[self.i-1]["md"] + \
-                #     self.samples[self.i-1]["η_cap"] + \
-                #     self.samples[self.i]["σ_square"] * eps
+                self.samples[self.i]["md"] = self.samples[self.i-1]["md"] + \
+                    self.samples[self.i-1]["η_cap"] + \
+                    self.samples[self.i]["σ_square"] * eps
 
                 self.KF(self.samples[self.i]["Q"], self.samples[self.i]["σ_square"])
-
+                '''
                 if self.debug:
+                    print("md", self.samples[self.i]["md"])
                     print("η_cap", self.samples[self.i]["η_cap"])
                     print("V", self.samples[self.i]["V"])
-                    print("sig sq ", self.samples[self.i]["σ_square"])
-                    print("eps ", eps)
-                    print("v=", v)
-                    print("η0_bar", self.samples[self.i]["η0_bar"])
-                    print("Q:", self.samples[self.i]["Q"])
-                    print("md", self.samples[self.i]["md"])
+                    
+                    print("η0_bar", self.η0_bar)
+                    print("V_η0", self.V_η0)
+                    print("sig sq ", self.σ_square)
+                    print("Q:", self.Q)
+                    
                     print()
 
                 rul = self.predict_RUL() / (10**6)
@@ -182,17 +174,17 @@ class RULPredictor:
         #   update y_i
         #   KF()    # for η_i_cap, V_i|i
 
-        pass
+        
 
     def EM(self):
         '''
         utilize self.samples, self.y_list, self.theta, self.theta_difference_threshold and set new theta
         '''
         # initial values of theta
-        η_0_bar = 0
-        P_0 = 1.01
-        Q = 1.01
-        σ_square = 1.01
+        η_0_bar = self.η0_bar
+        P_0 = self.V_η0
+        Q = self.Q
+        σ_square = self.σ_square
         for k in range(self.EM_ITER):
             expected_η, expected_η_square, expected_η_η_1 = self.RTS(
                 η_0_bar=η_0_bar, P_0=P_0, Q=Q, σ_square=σ_square)
@@ -206,13 +198,11 @@ class RULPredictor:
                 del_y = self.samples[j]["md"] - self.samples[j-1]["md"]
                 del_t = self.samples[j]["t"] - self.samples[j-1]["t"]
 
-                # print(f"del_t: {del_t}")
-                # print(f"del_y: {del_y}")
-
-                t3 += np.log(Q) + (expected_η_square[j] - 2 *
-                                   expected_η_η_1[j] + expected_η_square[j-1])/Q
-                t4 += np.log(σ_square) + (del_y**2 - 2*expected_η[j-1]*del_y*del_t + (
-                    del_t**2)*expected_η_square[j-1])/(σ_square*del_t)
+                t3 += np.log(Q) + \
+                    (expected_η_square[j] - 2 * expected_η_η_1[j] + expected_η_square[j-1])/Q
+                t4 += np.log(σ_square) + \
+                    (del_y**2 - 2*expected_η[j-1]*del_y*del_t + \
+                        del_t**2 * expected_η_square[j-1]) / (σ_square*del_t)
             likelihood = -t1 - t2 - t3 - t4
             # if self.debug:
             #     print(f"i={self.i} Likelihood: {likelihood}")
@@ -224,14 +214,14 @@ class RULPredictor:
                 del_y = self.samples[j]["md"] - self.samples[j-1]["md"]
                 del_t = self.samples[j]["t"] - self.samples[j-1]["t"]
                 f3 += (expected_η_square[j] - 2 *
-                       expected_η_η_1[j] + expected_η_square[j-1])
+                       expected_η_η_1[j] + expected_η_square[j-1])  
                 f4 += (del_y**2 - 2*expected_η[j-1]*del_y *
                        del_t + (del_t**2)*expected_η_square[j-1])/del_t
 
             η_0_bar = expected_η[0]
             P_0 = expected_η_square[0] - expected_η[0]**2 + 0.0001
-            Q = f3
-            σ_square = f4
+            Q = f3 / self.i
+            σ_square = f4 / self.i
         return η_0_bar, P_0, Q, σ_square
 
     def RTS(self, η_0_bar, P_0, Q, σ_square):
@@ -256,36 +246,39 @@ class RULPredictor:
             del_y = self.samples[j]["md"] - self.samples[j-1]["md"]
             del_t = self.samples[j]["t"] - self.samples[j-1]["t"]
 
-            P_prior.append(P[j-1] + Q)
+            try:
+                P_prior.append(P[j-1] + Q)
+            
+                K = del_t**2 * P_prior[j-1] + σ_square * del_t
+            
+                η_cap.append(
+                    η_cap[j-1] +
+                    P_prior[j-1] * del_t * (1/K) * (del_y - η_cap[j-1] * del_t)
+                )
+                # print(self.η_cap)
+                P.append(
+                    P_prior[j-1] -
+                    P_prior[j-1] * del_t**2 * (1/K) * P_prior[j-1]
+                )
+            except:
+                print(σ_square)
+                print(Q)
 
-            K = del_t**2 * P_prior[j-1] + σ_square * del_t
-
-            η_cap.append(
-                η_cap[j-1] +
-                P_prior[j-1] * del_t * (1/K) * (del_y - η_cap[j-1] * del_t)
-            )
-
-            P.append(
-                P_prior[j-1] -
-                P_prior[j-1] * del_t**2 * (1/K) * P_prior[j-1]
-            )
 
         # Backward iteration
         S = [0 for _ in range(self.i)]
-        η_cap_smoothed = [0 for _ in range(self.i+1)]
-        P_smoothed = [0 for _ in range(self.i+1)]
-
-        # My assumption: η_cap_smoothed[i] = η_cap[i], same for P_smoothed.
-        # Cannot find anything else for this
-        η_cap_smoothed[-1] = η_cap[-1]
-        P_smoothed[-1] = P[-1]
+        
 
         for j in range(self.i-1, -1, -1):
             S[j] = P[j] * (1 / P_prior[j])
-            η_cap_smoothed[j] = η_cap[j] + S[j] * \
-                (η_cap_smoothed[j+1] - η_cap[j])
-            P_smoothed[j] = P[j] + S[j] * \
-                (P_smoothed[j+1] - P_prior[j]) * S[j]
+            η_cap[j] = η_cap[j] + S[j] * \
+                (η_cap[j+1] - η_cap[j])
+            # print(self.η_cap)
+            P[j] = P[j] + S[j] * \
+                (P[j+1] - P_prior[j]) * S[j]
+        
+        self.η_cap = η_cap[-1]
+        self.P = P[-1]
 
         del_t = self.samples[self.i]["t"] - \
             self.samples[self.i-1]["t"]
@@ -300,11 +293,11 @@ class RULPredictor:
             M[j] = P[j] * S[j-1] + S[j] * (M[j+1] - P[j]) * S[j-1]
 
         for j in range(self.i, -1, -1):
-            expected_η[j] = η_cap_smoothed[j]
-            expected_η_square[j] = η_cap_smoothed[j]**2 + P_smoothed[j]
+            expected_η[j] = η_cap[j]
+            expected_η_square[j] = η_cap[j]**2 +P[j]
             if j != 0:
-                expected_η_η_1[j] = η_cap_smoothed[j] * \
-                    η_cap_smoothed[j-1] + M[j]
+                expected_η_η_1[j] = η_cap[j] * \
+                    η_cap[j-1] + M[j]
 
         return expected_η, expected_η_square, expected_η_η_1
 
@@ -329,18 +322,20 @@ class RULPredictor:
         '''
         ( sqrt(2)x(w - y_i) / sqrt(V_i|i) ) x D( η_i_cap / sqrt(2xV_i|i) )
         '''
-
-        D = dawsn(self.samples[self.i]["η_cap"] / ((2*self.samples[self.i]["V"]) ** 0.5))
+        if self.η_cap == 0:
+            raise RuntimeError('self.η_cap is 0')
+        D = dawsn(self.η_cap / ((2*self.P) ** 0.5))
 
         if D > 1 or D < -1:
             print(D)
             sys.exit()
 
         rul = 2**0.5 * \
-            (self.w - self.samples[self.i]["md"]) / self.samples[self.i]["V"] * D
+            (self.w - self.samples[self.i]["md"]) / self.P * D
         
         return rul
 
+
 if __name__ == '__main__':
-    rp = RULPredictor(debug=True)
+    rp = RULPredictor(debug=False)
     rp.test_data()
