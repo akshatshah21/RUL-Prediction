@@ -7,8 +7,8 @@ class mahalanobis_distance :
     def __init__(self, a) :
 
         for i in range(a.shape[0]) :
-        j = random.randint(0, a.shape[1]-1)
-        a[i][j] += 1e-4
+            j = random.randint(0, a.shape[1]-1)
+            a[i][j] += 1e-4
 
         self.a = a
         self.covariance_matrix = np.cov(a, rowvar=False)

@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import os
 from feature_utils import time_domain_features
 from mahalanobis_distance import mahalanobis_distance
 
@@ -26,16 +27,15 @@ class RUL_PREDICTOR:
 
         # current_sample = {md': , 't_i': , 'η_i': , 'η0_bar': , 'V_η0': , 'σ^2': , 'Q': , 'η_i_cap': , 'V_i|i': }
         # prev_sample = {md': , 't_i': , 'η_i-1': , 'η0_bar': , 'V_η0': , 'σ^2': , 'Q': , 'η_i-1_cap': , 'V_i-1|i-1': }
-        pass
+        
 
 
 
     def get_dataset(self, folder_name) :
-
-        files = [file for file in sorted(os.listdir(dir)) if 'acc' in file]
+        files = [file for file in sorted(os.listdir(folder_name)) if 'acc' in file]
         data_list = []
         for file in files :
-            df = pd.read_csv(f'{dir}/{file}', header=None)
+            df = pd.read_csv(f'{folder_name}/{file}', header=None)
             df = df.drop(5, axis=1)
             df = df.iloc[::100, :]
             data_list += df.values.tolist()
@@ -54,41 +54,41 @@ class RUL_PREDICTOR:
         w = MD value when acceleration > 20g ...(threshold used for RUL prediction)
         '''
         # use static variables for storing features / data / md values
-
-        data = get_dataset('./' + train_folder_name)
+    
+        data = self.get_dataset('../dataset/' + train_folder_name)
         index = np.argmax(data[:, -1] > 20)
 
         features = time_domain_features(data[:, -1])
+
         self.md = mahalanobis_distance(features)
 
         distances = np.zeros((data.shape[0], 1))
 
         for i in range(data.shape[0]) :
-            distances[i] = md.distance(a[i])
+            distances[i] = self.md.distance(features[i, :])
 
-        mean =  np.mean(distances))
-        stddev = np.std(distances))
+        mean =  np.mean(distances)
+        stddev = np.std(distances)
 
         self.md_threshold = mean + 3 * stddev
-        self.w = distances[index]
+        self.w = distances[index][0]
+
 
     def get_test_data(self, test_folder_name):
 
-        data = get_dataset('./' + test_folder_name)
+        data = self.get_dataset('../dataset/' + test_folder_name)
         md_time = np.zeros((data.shape[0], 2))
 
-        time = get_time(data[:, 0:-1])
+        time = self.get_time(data[:, 0:-1])
         features = time_domain_features(data[:, -1])
-
-        # md = mahalanobis_distance(features)
 
         distances = np.zeros((data.shape[0], 1))
         for i in range(data.shape[0]) :
             md_time[i, 0] = time[i]
-            md_time[i, 1] = self.md.distance(a[i])
+            md_time[i, 1] = self.md.distance(features[i, :])
 
             distances[i] = md_time[i, 1]
-
+            
         return md_time
 
 
@@ -145,3 +145,9 @@ class RUL_PREDICTOR:
         '''
 
         pass
+
+
+if __name__ == '__main__' :
+    rul = RUL_PREDICTOR()
+    rul.set_md_threshold('Learning_set/Bearing1_1/')
+    rul.get_test_data('Learning_set/Bearing1_1/')
