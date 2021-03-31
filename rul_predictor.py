@@ -1,4 +1,7 @@
 import pandas as pd
+import os
+from feature_utils import time_domain_features
+from mahalanobis_distance import mahalanobis_distance
 import numpy as np
 from scipy.special import dawsn
 import pickle
@@ -27,9 +30,10 @@ class RULPredictor:
 
     def __init__(self, debug=False):
 
-        self.MD_THRESHOLD = 1549400.9278817168
+        self.MD_THRESHOLD = None
         self.degrading = False
-        self.w = 1929836.9214121248
+        self.w = None
+        self.md = None
 
         self.samples = []
 
@@ -51,11 +55,10 @@ class RULPredictor:
 
     
     def get_dataset(self, folder_name) :
-
-        files = [file for file in sorted(os.listdir(dir)) if 'acc' in file]
+        files = [file for file in sorted(os.listdir(folder_name)) if 'acc' in file]
         data_list = []
         for file in files :
-            df = pd.read_csv(f'{dir}/{file}', header=None)
+            df = pd.read_csv(f'{folder_name}/{file}', header=None)
             df = df.drop(5, axis=1)
             df = df.iloc[::100, :]
             data_list += df.values.tolist()
@@ -73,42 +76,43 @@ class RULPredictor:
         μ, σ, md_threshold = threshold to detect degradation
         w = MD value when acceleration > 20g ...(threshold used for RUL prediction)
         '''
-
-        data = get_dataset('./' + train_folder_name)
+        # use static variables for storing features / data / md values
+    
+        data = self.get_dataset('../dataset/' + train_folder_name)
         index = np.argmax(data[:, -1] > 20)
 
         features = time_domain_features(data[:, -1])
+
         self.md = mahalanobis_distance(features)
 
         distances = np.zeros((data.shape[0], 1))
 
         for i in range(data.shape[0]) :
-            distances[i] = md.distance(a[i])
+            distances[i] = self.md.distance(features[i, :])
 
-        mean =  np.mean(distances))
-        stddev = np.std(distances))
+        mean =  np.mean(distances)
+        stddev = np.std(distances)
 
-        self.md_threshold = mean + 3 * stddev
-        self.w = distances[index]
+        self.MD_THRESHOLD = mean + 3 * stddev
+        self.w = distances[index][0]
+
 
     
     def get_test_data(self, test_folder_name):
 
-        data = get_dataset('./' + test_folder_name)
+        data = self.get_dataset('../dataset/' + test_folder_name)
         md_time = np.zeros((data.shape[0], 2))
 
-        time = get_time(data[:, 0:-1])
+        time = self.get_time(data[:, 0:-1])
         features = time_domain_features(data[:, -1])
-
-        # md = mahalanobis_distance(features)
 
         distances = np.zeros((data.shape[0], 1))
         for i in range(data.shape[0]) :
             md_time[i, 0] = time[i]
-            md_time[i, 1] = self.md.distance(a[i])
+            md_time[i, 1] = self.md.distance(features[i, :])
 
             distances[i] = md_time[i, 1]
-
+            
         return md_time
 
 
@@ -122,19 +126,20 @@ class RULPredictor:
         return time
         
 
-    def test_data(self):
+    def test_data(self, test_data):
         '''
         parameters: 
         set path in get_data() to file containing MD values of samples and corresponding time in microseconds
 
         '''
 
-        def get_data():
-            data = np.load("./dataset/1_1_corr.npz")["arr_0"]
-            self.start_time = data[0][0]
-            return data[:]
+        # def get_data():
+        #     data = np.load("./dataset/1_1_corr.npz")["arr_0"]
+        #     self.start_time = data[0][0]
+        #     return data[:]
 
-        test_data = get_data()
+        # test_data = get_data()
+
 
         for sample in test_data:
             if not self.degrading and sample[1] > self.MD_THRESHOLD:    # 1st value to cross MD_THRESHOLD
@@ -386,6 +391,11 @@ class RULPredictor:
         plt.show()
 
 if __name__ == '__main__':
+    # rp = RULPredictor(debug=False)
+    # rp.test_data()
+    # rp.plot_RUL()
+
     rp = RULPredictor(debug=False)
-    rp.test_data()
-    rp.plot_RUL()
+    rp.set_md_threshold('Learning_set/Bearing1_1/')
+    data = rp.get_test_data('Learning_set/Bearing1_1/')
+    rp.test_data(data)
