@@ -70,7 +70,7 @@ class RULPredictor:
     def set_md_threshold(self, train_folder_name) :
         '''
         parameters:
-        train_folder_list = list of folder path containing training csv's, eg: ['Learning_set/Bearing1_1', 'Learning_set/Bearing1_2']
+        train_folder_list = list of folder path containing training csv's, eg: ['Learning_set/Bearing1_1/', 'Learning_set/Bearing1_2/']
 
         returns / sets:
         μ, σ, md_threshold = threshold to detect degradation
@@ -78,7 +78,7 @@ class RULPredictor:
         '''
         # use static variables for storing features / data / md values
     
-        data = self.get_dataset('../dataset/' + train_folder_name)
+        data = self.get_dataset(train_folder_name)
         index = np.argmax(data[:, -1] > 20)
 
         features = time_domain_features(data[:, -1])
@@ -100,7 +100,7 @@ class RULPredictor:
     
     def get_test_data(self, test_folder_name):
 
-        data = self.get_dataset('../dataset/' + test_folder_name)
+        data = self.get_dataset(test_folder_name)
         md_time = np.zeros((data.shape[0], 2))
 
         time = self.get_time(data[:, 0:-1])
