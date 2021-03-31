@@ -3,9 +3,12 @@ import numpy as np
 from scipy.special import dawsn
 import pickle
 import warnings
+import matplotlib.pyplot as plt
 import sys
 # from feature_utils import *       # functions for calculating 14 features
 # μ σ η Σ
+
+DEL_T = 0.1
 
 np.random.seed(42)
 # warnings.filterwarnings("error")
@@ -24,7 +27,7 @@ class RULPredictor:
 
         self.MD_THRESHOLD = 8.376405756923484
         self.degrading = False
-        self.w = 7.31
+        self.w = 7.7
 
         # self.samples = [{
         # 'md': ,
@@ -47,6 +50,8 @@ class RULPredictor:
         self.V_prior = 0
         self.debug = debug
         self.start_time = 0
+
+        self.RULs = []
 
         pass
 
@@ -101,14 +106,14 @@ class RULPredictor:
             #     if self.debug:
             #         print(data.shape)
             #         print(data[:10])
-            data = np.load("../1_1max.npz")["arr_0"]
+            data = np.load("./dataset/time_md1_1max.npz")["arr_0"]
             self.start_time = data[0][0]
             return data[:]
 
 
         # test_data = get_data("dataset/test_set/Bearing1_3")
         test_data = get_data()
-        test_data = test_data[test_data[:, 1] > self.MD_THRESHOLD]
+        # test_data = test_data[test_data[:, 1] > self.MD_THRESHOLD]
 
 
         for sample in test_data:
@@ -163,6 +168,7 @@ class RULPredictor:
                     print()
 
                 rul = self.predict_RUL()
+                self.RULs.append(rul)
                 print(f"RUL at i={self.i}, t={self.samples[self.i]['t']}: {rul}")
                 if self.debug:
                     # print(self.samples)
@@ -187,9 +193,9 @@ class RULPredictor:
         '''
         # initial values of theta
         η_0_bar = 0
-        P_0 = 10
-        Q = 10
-        σ_square = 10
+        P_0 = np.random.rand()
+        Q = np.random.rand()
+        σ_square = np.random.rand()
         for k in range(self.EM_ITER):
             expected_η, expected_η_square, expected_η_η_1 = self.RTS(
                 η_0_bar=η_0_bar, P_0=P_0, Q=Q, σ_square=σ_square)
@@ -201,7 +207,8 @@ class RULPredictor:
             t4 = 0
             for j in range(1, self.i+1):
                 del_y = self.samples[j]["md"] - self.samples[j-1]["md"]
-                del_t = self.samples[j]["t"] - self.samples[j-1]["t"]
+                # del_t = self.samples[j]["t"] - self.samples[j-1]["t"]
+                del_t = DEL_T
                 # print("del_t: ",del_t)
                 t3 += np.log(Q) + \
                     (expected_η_square[j] - 2 * expected_η_η_1[j] + expected_η_square[j-1])/Q
@@ -216,7 +223,8 @@ class RULPredictor:
             f4 = 0
             for j in range(1, self.i+1):
                 del_y = self.samples[j]["md"] - self.samples[j-1]["md"]
-                del_t = self.samples[j]["t"] - self.samples[j-1]["t"]
+                # del_t = self.samples[j]["t"] - self.samples[j-1]["t"]
+                del_t = DEL_T
                 f3 += (expected_η_square[j] - 2 *
                        expected_η_η_1[j] + expected_η_square[j-1])  
                 f4 += ((del_y**2) - 2*expected_η[j-1]*del_y *
@@ -256,7 +264,8 @@ class RULPredictor:
         P_prior = []
         for j in range(1, self.i+1):
             del_y = self.samples[j]["md"] - self.samples[j-1]["md"]
-            del_t = self.samples[j]["t"] - self.samples[j-1]["t"]
+            # del_t = self.samples[j]["t"] - self.samples[j-1]["t"]
+            del_t = DEL_T
             
             try:
                 P_prior.append(P[j-1] + Q)
@@ -294,8 +303,11 @@ class RULPredictor:
             P_smoothed[j] = P[j] + S[j] * \
                 (P_smoothed[j+1] - P_prior[j]) * S[j]
 
-        del_t = self.samples[self.i]["t"] - \
-            self.samples[self.i-1]["t"]
+        # del_t = self.samples[self.i]["t"] - \
+        #     self.samples[self.i-1]["t"]
+
+        del_t = DEL_T
+
         M = [0 for _ in range(self.i+1)]
         M[-1] = (1-K*del_t) * P[self.i-1]
 
@@ -322,7 +334,8 @@ class RULPredictor:
         Kalman Filter
         '''
         del_y = self.samples[self.i]["md"] - self.samples[self.i-1]["md"]
-        del_t = self.samples[self.i]["t"] - self.samples[self.i-1]["t"]
+        # del_t = self.samples[self.i]["t"] - self.samples[self.i-1]["t"]
+        del_t = DEL_T
 
         self.V_prior = self.samples[self.i-1]["V"] + Q
 
@@ -350,7 +363,14 @@ class RULPredictor:
         
         return rul
 
+    def plot_RUL(self):
+        
+        plt.plot(self.RULs)
+        plt.xlabel("Samples")
+        plt.ylabel("RUL in unknown units")
+        plt.show()
 
 if __name__ == '__main__':
     rp = RULPredictor(debug=False)
     rp.test_data()
+    rp.plot_RUL()
