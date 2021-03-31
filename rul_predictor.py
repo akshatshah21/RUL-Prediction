@@ -25,16 +25,10 @@ class RULPredictor:
 
     def __init__(self, debug=False):
 
-        self.MD_THRESHOLD = 8.376405756923484
+        self.MD_THRESHOLD = 1549400.9278817168
         self.degrading = False
-        self.w = 7.7
+        self.w = 1929836.9214121248
 
-        # self.samples = [{
-        # 'md': ,
-        # 't': ,
-        # 'η': ,
-        # 'V':
-        # }]
         self.samples = []
 
         self.η0_bar = 0
@@ -55,41 +49,6 @@ class RULPredictor:
 
         pass
 
-    def train_data(self, train_folder_list):
-        '''
-        parameters:
-        train_folder_list = list of folder path containing training csv's, eg: ['Learning_set/Bearing1_1', 'Learning_set/Bearing1_2']
-
-        returns / sets:
-        μ, σ, md_threshold = threshold to detect degradation
-        w = MD value when acceleration > 20g ...(threshold used for RUL prediction)
-        '''
-
-        # use static variables for storing features / data / md values
-        pass
-
-    def get_features(self, data):
-        '''
-        parameters: 
-        data = vibration data?
-
-        returns:
-        feature vector 'dictionary' (length 14)
-        '''
-
-        pass
-
-    def get_mahalonobis_distance(self, feature_vector, mean_vector):
-        '''
-        parameters:
-        feature_vector dictionary = 14 time domain features
-        mean_vector = mean values for 14 features
-
-        returns:
-        mahalonobis_dist
-        '''
-
-        pass
 
     def test_data(self):
         '''
@@ -100,21 +59,12 @@ class RULPredictor:
         '''
 
         def get_data():
-            # with open("../data_pickle_1_1", 'rb') as f:
-            #     data = pickle.load(f)
-            #     # data = data[100:200]
-            #     if self.debug:
-            #         print(data.shape)
-            #         print(data[:10])
-            data = np.load("./dataset/time_md1_1max.npz")["arr_0"]
+            data = np.load("./dataset/1_1_corr.npz")["arr_0"]
             self.start_time = data[0][0]
             return data[:]
 
-
-        # test_data = get_data("dataset/test_set/Bearing1_3")
         test_data = get_data()
         # test_data = test_data[test_data[:, 1] > self.MD_THRESHOLD]
-
 
         for sample in test_data:
             if not self.degrading and sample[1] > self.MD_THRESHOLD:
@@ -124,20 +74,17 @@ class RULPredictor:
                 self.samples.append({
                     "t": (sample[0] - self.start_time)/1e6,
                     "md": sample[1],
-                    # "η_cap": 0,
-                    # "V": 1.01
                 })
                 continue
                 
             
+            # if self.degrading and self.i >= 0 and sample[1] > self.MD_THRESHOLD:
             if self.degrading and self.i >= 0:
                 self.i += 1
                 
                 self.samples.append({
                     "t": (sample[0] - self.start_time)/1e6,
                     "md": sample[1],
-                    # "η_cap": 0,
-                    # "V": 1.01
                 })
                 self.η0_bar, self.V_η0, self.σ_square, self.Q = self.EM()
                 '''
@@ -157,8 +104,6 @@ class RULPredictor:
                 '''
                 if self.debug:
                     print("md", self.samples[self.i]["md"])
-                    # print("η_cap", self.samples[self.i]["η_cap"])
-                    # print("V", self.samples[self.i]["V"])
                     
                     print("η0_bar", self.η0_bar)
                     print("V_η0", self.V_η0)
@@ -171,20 +116,7 @@ class RULPredictor:
                 self.RULs.append(rul)
                 print(f"RUL at i={self.i}, t={self.samples[self.i]['t']}: {rul}")
                 if self.debug:
-                    # print(self.samples)
                     input(f"i {self.i}")
-                
-
-        # Loop on test data
-        # maintain y_all_list --> all MD values
-        # maintain y_list --> those who cross md_threshold
-        # if md > md_threshold:
-        #   EM()    # for theta
-        #   calculate RUL using formula
-        #   update η_i
-        #   update y_i
-        #   KF()    # for η_i_cap, V_i|i
-
         
 
     def EM(self):
@@ -209,7 +141,6 @@ class RULPredictor:
                 del_y = self.samples[j]["md"] - self.samples[j-1]["md"]
                 # del_t = self.samples[j]["t"] - self.samples[j-1]["t"]
                 del_t = DEL_T
-                # print("del_t: ",del_t)
                 t3 += np.log(Q) + \
                     (expected_η_square[j] - 2 * expected_η_η_1[j] + expected_η_square[j-1])/Q
                 t4 += np.log(σ_square) + \
@@ -276,7 +207,6 @@ class RULPredictor:
                     η_cap[j-1] +
                     P_prior[j-1] * del_t * (1/K) * (del_y - η_cap[j-1] * del_t)
                 )
-                # print(self.η_cap)
                 P.append(
                     P_prior[j-1] -
                     P_prior[j-1] * del_t**2 * (1/K) * P_prior[j-1]
@@ -351,15 +281,13 @@ class RULPredictor:
         '''
         ( sqrt(2)x(w - y_i) / sqrt(V_i|i) ) x D( η_i_cap / sqrt(2xV_i|i) )
         '''
-        if self.η_cap == 0:
-            raise RuntimeError('self.η_cap is 0')
-        D = dawsn(self.η_cap / ((2*self.P) ** 0.5))
+        try:
+            D = dawsn(self.η_cap / ((2*self.P) ** 0.5))
+        except:
+            print(f"self.η_cap={self.η_cap}")
+            print(f"self.P={self.P}")
 
-        if D > 1 or D < -1:
-            print(D)
-            sys.exit()
-
-        rul = ((2**0.5) * (self.w - self.samples[self.i]["md"]) * D)/ (self.P**0.5) 
+        rul = abs(((2**0.5) * (self.w - self.samples[self.i]["md"]) * D)/ (self.P**0.5)) * 1e2
         
         return rul
 
@@ -368,6 +296,8 @@ class RULPredictor:
         plt.plot(self.RULs)
         plt.xlabel("Samples")
         plt.ylabel("RUL in unknown units")
+        plt.ylim((0, 1000))
+        plt.grid()
         plt.show()
 
 if __name__ == '__main__':
