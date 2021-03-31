@@ -30,9 +30,10 @@ class RULPredictor:
 
     def __init__(self, debug=False):
 
-        self.MD_THRESHOLD = 1549400.9278817168
+        self.MD_THRESHOLD = None
         self.degrading = False
-        self.w = 1929836.9214121248
+        self.w = None
+        self.md = None
 
         self.samples = []
 
@@ -92,7 +93,7 @@ class RULPredictor:
         mean =  np.mean(distances)
         stddev = np.std(distances)
 
-        self.md_threshold = mean + 3 * stddev
+        self.MD_THRESHOLD = mean + 3 * stddev
         self.w = distances[index][0]
 
 
@@ -125,19 +126,20 @@ class RULPredictor:
         return time
         
 
-    def test_data(self):
+    def test_data(self, test_data):
         '''
         parameters: 
         set path in get_data() to file containing MD values of samples and corresponding time in microseconds
 
         '''
 
-        def get_data():
-            data = np.load("./dataset/1_1_corr.npz")["arr_0"]
-            self.start_time = data[0][0]
-            return data[:]
+        # def get_data():
+        #     data = np.load("./dataset/1_1_corr.npz")["arr_0"]
+        #     self.start_time = data[0][0]
+        #     return data[:]
 
-        test_data = get_data()
+        # test_data = get_data()
+
 
         for sample in test_data:
             if not self.degrading and sample[1] > self.MD_THRESHOLD:    # 1st value to cross MD_THRESHOLD
@@ -389,6 +391,11 @@ class RULPredictor:
         plt.show()
 
 if __name__ == '__main__':
+    # rp = RULPredictor(debug=False)
+    # rp.test_data()
+    # rp.plot_RUL()
+
     rp = RULPredictor(debug=False)
-    rp.test_data()
-    rp.plot_RUL()
+    rp.set_md_threshold('Learning_set/Bearing1_1/')
+    data = rp.get_test_data('Learning_set/Bearing1_1/')
+    rp.test_data(data)
