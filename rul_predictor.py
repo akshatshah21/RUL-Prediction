@@ -22,9 +22,9 @@ class RULPredictor:
 
     def __init__(self, debug=False):
 
-        self.MD_THRESHOLD = 5
+        self.MD_THRESHOLD = 8.408846168281288
         self.degrading = False
-        self.w = 24
+        self.w = 10
 
         # self.samples = [{
         # 'md': ,
@@ -43,7 +43,7 @@ class RULPredictor:
         self.P = None
 
         self.i = -1
-        self.EM_ITER = 10
+        self.EM_ITER = 20
         self.V_prior = 0
         self.debug = debug
 
@@ -94,13 +94,14 @@ class RULPredictor:
         '''
 
         def get_data():
-            with open("../data_pickle_1_1", 'rb') as f:
-                data = pickle.load(f)
+            # with open("./dataset/data_pickle_1", 'rb') as f:
+                # data = pickle.load(f)
                 # data = data[100:200]
-                if self.debug:
-                    print(data.shape)
-                    print(data[:10])
-            return data[:]
+                # if self.debug:
+                #     print(data.shape)
+                #     print(data[:10])
+            data = np.load('./dataset/time_md1_1max.npz')['arr_0']
+            return data
 
         # test_data = get_data("dataset/test_set/Bearing1_3")
         test_data = get_data()
@@ -108,28 +109,29 @@ class RULPredictor:
 
 
         for sample in test_data:
-            if not self.degrading and sample[1] > self.MD_THRESHOLD:
-                self.degrading = True
-                print("testing")
-                self.i = 0
-                self.samples.append({
-                    "t": sample[0]/1e6,
-                    "md": sample[1],
-                    # "η_cap": 0,
-                    # "V": 1.01
-                })
-                continue
+            # if not self.degrading and sample[1] > self.MD_THRESHOLD:
+            #     self.degrading = True
+            #     print("testing")
+            #     self.i = 0
+            #     self.samples.append({
+            #         "t": sample[0]/1e6,
+            #         "md": sample[1],
+            #         # "η_cap": 0,
+            #         # "V": 1.01
+            #     })
+            #     continue
                 
             
-            if self.degrading and self.i >= 0:
-                self.i += 1
-                
-                self.samples.append({
-                    "t": sample[0]/1e6,
-                    "md": sample[1],
-                    # "η_cap": 0,
-                    # "V": 1.01
-                })
+            # if self.degrading and self.i >= 0:
+            self.i += 1
+            
+            self.samples.append({
+                "t": sample[0] / 1e6,
+                "md": sample[1],
+                # "η_cap": 0,
+                # "V": 1.01
+            })
+            if self.i > 0:
                 self.η0_bar, self.V_η0, self.σ_square, self.Q = self.EM()
                 '''
                 v = np.random.rand() * self.samples[self.i]["Q"]**0.5
@@ -183,9 +185,9 @@ class RULPredictor:
         '''
         # initial values of theta
         η_0_bar = 0
-        P_0 = 1 + 1e-6
-        Q = 1 + 1e-6
-        σ_square = 1 + 1e-6
+        P_0 = 10
+        Q = 10
+        σ_square = 10
         for k in range(self.EM_ITER):
             expected_η, expected_η_square, expected_η_η_1 = self.RTS(
                 η_0_bar=η_0_bar, P_0=P_0, Q=Q, σ_square=σ_square)
