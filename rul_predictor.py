@@ -15,6 +15,7 @@ class RUL_PREDICTOR:
 
         self.md_threshold = None
         self.w = None
+        self.md = None
 
         # self.samples = [{'y_i': , 't_i': , 'η_i': , 'η0_bar': , 'V_η0': , 'σ^2': , 'Q': , 'η_i_cap': , 'V_i|i': }]
         self.y_list = None          # index of those who cross md_threshold
@@ -35,7 +36,7 @@ class RUL_PREDICTOR:
         data_list = []
         for file in files :
             df = pd.read_csv(f'{dir}/{file}', header=None)
-            df = df.drop(4, axis=1)
+            df = df.drop(5, axis=1)
             df = df.iloc[::100, :]
             data_list += df.values.tolist()
             
@@ -55,13 +56,10 @@ class RUL_PREDICTOR:
         # use static variables for storing features / data / md values
 
         data = get_dataset('./' + train_folder_name)
-        index = 0
-        for d in data[:, -1] :
-            if d > 20 :
-                index = i
-                break
+        index = np.argmax(data[:, -1] > 20)
+
         features = time_domain_features(data[:, -1])
-        md = mahalanobis_distance(features)
+        self.md = mahalanobis_distance(features)
 
         distances = np.zeros((data.shape[0], 1))
 
@@ -82,12 +80,12 @@ class RUL_PREDICTOR:
         time = get_time(data[:, 0:-1])
         features = time_domain_features(data[:, -1])
 
-        md = mahalanobis_distance(features)
+        # md = mahalanobis_distance(features)
 
         distances = np.zeros((data.shape[0], 1))
         for i in range(data.shape[0]) :
             md_time[i, 0] = time[i]
-            md_time[i, 1] = md.distance(a[i])
+            md_time[i, 1] = self.md.distance(a[i])
 
             distances[i] = md_time[i, 1]
 
