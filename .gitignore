@@ -3,6 +3,10 @@ my_data
 # Data
 dataset
 
+# Editors and IDEs
+.vscode
+.idea
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
