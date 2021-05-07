@@ -488,5 +488,5 @@ if __name__ == '__main__':
     
     data = rp.get_test_data('./dataset/Learning_set/Bearing1_1/', mode='max', save_to_file=False, file_path=None)
     rp.plot_test_data(data, load_from_file=False, file_path=None)
-    sys.exit()
+    # sys.exit()
     rp.test_data(data, load_from_file=False, file_path=None)
