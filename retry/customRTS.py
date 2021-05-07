@@ -2,20 +2,16 @@ import numpy as np
 from customKF import CustomKF
 
 class CustomRTS():
-    def __init__(self):
-        pass
+    def __init__(self, z, del_t):
+        self.z = z
+        self.del_t = del_t
 
-    def run(self, initial_mean, initial_variance, Q, sigma, y, t):
-        z = np.diff(y)
-        del_t = np.diff(t)
-        print(z)
-        print(del_t)
-
+    def run(self, initial_mean, initial_variance, Q, sigma):
         # Forward batch filter
         kf = CustomKF(Q, sigma)
-        prior_means, prior_variances, post_means, post_variances = kf.batch_filter(initial_mean, initial_variance, z, del_t)
+        prior_means, prior_variances, post_means, post_variances = kf.batch_filter(initial_mean, initial_variance, self.z, self.del_t)
 
-        num_samples = len(z)
+        num_samples = len(self.z)
 
         # Smoother
         S = [0 for _ in range(num_samples)]
@@ -25,7 +21,7 @@ class CustomRTS():
         smoothed_means[-1] = post_means[-1]
         smoothed_variances[-1] = post_variances[-1]
 
-        for j in range(num_samples-2, -1, -1):
+        for j in range(num_samples - 2, -1, -1):
             S[j] = post_variances[j] * (1 / prior_variances[j+1])
             smoothed_means[j] = post_means[j] + S[j] * (smoothed_means[j+1] - prior_means[j+1])
             smoothed_variances[j] = post_variances[j] + S[j] * S[j] * (smoothed_variances[j+1] - prior_variances[j+1])
@@ -49,4 +45,3 @@ class CustomRTS():
                 expected_η_η_1[j] = smoothed_means[j] * smoothed_means[j-1] + M[j]
 
         return expected_η, expected_η_square, expected_η_η_1
-        

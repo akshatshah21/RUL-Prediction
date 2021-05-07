@@ -16,6 +16,7 @@ DEL_T = 0.1     # considering frequency and scaling by 100 as done in original p
 
 np.random.seed(42)
 
+
 class RULPredictor:
     '''
     # TODO
@@ -24,7 +25,7 @@ class RULPredictor:
     * EM_ITER
     * Flow of test data. Do we need eq 9 from paper
     * w-y or D are coming negative, is there a relation
-    * units of time (hence DEL_T) 
+    * units of time (hence DEL_T)
 
     '''
 
@@ -204,7 +205,8 @@ class RULPredictor:
         P_0 = np.random.rand()
         Q = np.random.rand()
         σ_square = np.random.rand()
-        
+        likelihoods = list()
+
         for k in range(self.EM_ITER):
             expected_η, expected_η_square, expected_η_η_1 = self.RTS(
                 η_0_bar=η_0_bar, P_0=P_0, Q=Q, σ_square=σ_square)
@@ -227,8 +229,7 @@ class RULPredictor:
                     (del_y**2 - 2*expected_η[j-1]*del_y*del_t + \
                         del_t**2 * expected_η_square[j-1]) / (σ_square*del_t)
             likelihood = -t1 - t2 - t3 - t4
-
-            
+            likelihoods.append(likelihood)
             # M part ####################################################################################
             f3 = 0
             f4 = 0
@@ -257,6 +258,12 @@ class RULPredictor:
                 print("Q: ",Q)
                 print("sigma square: ",σ_square)
         
+        print("likelihoods: ", likelihoods)
+        plt.plot(likelihoods)
+        plt.xlabel("EM Iteration")
+        plt.ylabel("Likelihoods in unknown units")
+        plt.grid()
+        plt.show()
         return η_0_bar, P_0, Q, σ_square
 
 
