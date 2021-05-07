@@ -1,7 +1,18 @@
+import pandas as pd
+import numpy as np
+import os
+import matplotlib.pyplot as plt
+from feature_utils import time_domain_features
+from mahalanobis_distance import mahalanobis_distance
+
+
 
 class DataExtraction:
     def __init__(self):
-        pass
+        self.MD_THRESHOLD = None
+        self.w = None
+        self.md = None
+
 
     def get_dataset(self, folder_name, mode) :
         '''
@@ -60,13 +71,15 @@ class DataExtraction:
         for i in range(data.shape[0]) :
             distances[i] = self.md.distance(features[i, :])
 
-        mean =  np.mean(distances)
-        stddev = np.std(distances)
+        mean =  np.mean(distances[:1500])
+        stddev = np.std(distances[:1500])
 
         self.MD_THRESHOLD = mean + 3 * stddev
         self.w = np.log(distances[index][0])
 
-        print(self.w, self.MD_THRESHOLD)
+        # print(self.w, self.MD_THRESHOLD)
+
+
 
     def get_test_data(self, test_folder_name, mode='step', save_to_file=False, file_path=None):
         '''
@@ -101,6 +114,8 @@ class DataExtraction:
 
         return md_time
 
+
+
     def get_time(self, data) :
         '''
         parameters:
@@ -111,7 +126,7 @@ class DataExtraction:
             data[:, 3] = microseconds
         
         returns:
-        time = np array of shape (num_samples, ) which indicates time in microseconds
+        time = np array of shape (num_samples,) which indicates time in microseconds
         '''
 
         time = data[:, -1]
@@ -120,6 +135,8 @@ class DataExtraction:
         time+= data[:, 2] * (10**6)
 
         return time
+
+
     
     def plot_test_data(self, test_data=None, load_from_file=False, file_path=None) :
         '''
@@ -137,30 +154,27 @@ class DataExtraction:
             print('test_data is None')
             return
 
-        distances = np.log(test_data[:, 1])
+        distances = np.log(np.absolute(test_data[:, 1] - self.mean))
+        # distances = np.log(test_data[:, 1])
         # distances = test_data[:, 1]
         plt.plot(distances)
         plt.xlabel("Samples")
         plt.ylabel("MD values")
-        # plt.ylim((0, 1000))
         plt.grid()
         plt.show()
 
-    def test_data(self, test_data=None, load_from_file=False, file_path=None):
+
+
+    def get_test_data_from_file(self, file_path=None):
         '''
-        parameters: 
-        test_data : np array of shape (num_samples, 2) returned by the get_test_data function
-        load_from_file : True or False. 
+        parameters:  
         file_path : file path of the npz file where test_data is stored. eg. './my_data/file_name.npz
 
-        The test_data can either be taken from the function parameters or load the test_data from a file
-
         returns:
-        
+        test_data : np array of shape(num_samples, 2) where 
+            test_data[:, 0] = time in microseconds
+            test_data[:, 1] = MD value
         '''
 
-        if load_from_file and file_path is not None:
-            test_data = np.load(file_path)["arr_0"]
-        elif test_data is None :
-            print('test_data is None')
-            return
+        test_data = np.load(file_path)["arr_0"]
+        return test_data

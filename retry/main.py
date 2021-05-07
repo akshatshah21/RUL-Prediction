@@ -1,3 +1,4 @@
+import sys
 from rul_predictor import RULPredictor
 from data_extraction import DataExtraction
 
@@ -5,11 +6,16 @@ if __name__ == '__main__':
     data_extractor = DataExtraction()
     rp = RULPredictor()
 
-    # data_extractor.get_dataset()
-    # data_extractor.set_md_threshold()
-    # data_extractor.get_test_data()
 
+    data_extractor.set_md_threshold('./dataset/Learning_set/Bearing1_1/', mode='max')
 
+    data = data_extractor.get_test_data('./dataset/Learning_set/Bearing1_1/', mode='max', save_to_file=False, file_path=None)
+    # data = data_extractor.get_test_data_from_file(data, file_path='')
+
+    data_extractor.plot_test_data(data, load_from_file=False, file_path=None)
+
+    
+    
     predictions = []
     '''
     for y, t in data:
