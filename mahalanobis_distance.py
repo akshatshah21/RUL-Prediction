@@ -11,14 +11,14 @@ class mahalanobis_distance :
             a[i][j] += 1e-4
 
         self.a = a
-        self.covariance_matrix = np.cov(a, rowvar=False)
-        # self.covariance_matrix = np.corrcoef(a)
+        # self.covariance_matrix = np.cov(a, rowvar=False)
+        self.covariance_matrix = np.corrcoef(a, rowvar=False)
         self.covariance_matrix_inv = np.linalg.inv(self.covariance_matrix)
         self.mean = np.mean(self.a[:], axis=0).reshape(1, -1)
 
     def distance(self, z) :
-        # z_minus_mean = z.reshape(1, -1)
-        z_minus_mean = z - self.mean
+        z_minus_mean = z.reshape(1, -1)
+        # z_minus_mean = z - self.mean
         
         left_product = np.dot(z_minus_mean, self.covariance_matrix_inv)
         md = np.dot(left_product, z_minus_mean.T)

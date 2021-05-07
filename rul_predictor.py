@@ -110,10 +110,10 @@ class RULPredictor:
         for i in range(data.shape[0]) :
             distances[i] = self.md.distance(features[i, :])
 
-        mean =  np.mean(distances)
-        stddev = np.std(distances)
+        self.mean =  np.mean(distances[:2000])
+        self.stddev = np.std(distances[:2000])
 
-        self.MD_THRESHOLD = mean + 3 * stddev
+        self.MD_THRESHOLD = self.mean + 3 * self.stddev
         self.w = np.log(distances[index][0])
 
         print(self.w, self.MD_THRESHOLD)
@@ -190,7 +190,7 @@ class RULPredictor:
             print('test_data is None')
             return
 
-        distances = np.log(test_data[:, 1])
+        distances = np.log(np.absolute(test_data[:, 1] - self.mean))
         # distances = test_data[:, 1]
         plt.plot(distances)
         plt.xlabel("Samples")
