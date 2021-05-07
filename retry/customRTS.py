@@ -26,7 +26,7 @@ class CustomRTS():
         smoothed_variances[-1] = post_variances[-1]
 
         for j in range(num_samples-2, -1, -1):
-            S[j] = post_variances[j] * (1 / prior_variances[j])
+            S[j] = post_variances[j] * (1 / prior_variances[j+1])
             smoothed_means[j] = post_means[j] + S[j] * (smoothed_means[j+1] - prior_means[j+1])
             smoothed_variances[j] = post_variances[j] + S[j] * S[j] * (smoothed_variances[j+1] - prior_variances[j+1])
 
