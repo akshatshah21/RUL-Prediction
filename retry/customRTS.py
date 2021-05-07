@@ -26,10 +26,10 @@ class CustomRTS():
             smoothed_means[j] = post_means[j] + S[j] * (smoothed_means[j+1] - prior_means[j+1])
             smoothed_variances[j] = post_variances[j] + S[j] * S[j] * (smoothed_variances[j+1] - prior_variances[j+1])
 
-        K = (del_t[-1] ** 2) * prior_variances[-1] + (sigma ** 2) * del_t[-1]
+        K = (self.del_t[-1] ** 2) * prior_variances[-1] + (sigma ** 2) * self.del_t[-1]
 
         M = [0 for _ in range(num_samples)]
-        M[-1] = (1 - K * del_t[-1]) * post_variances[-2]
+        M[-1] = (1 - K * self.del_t[-1]) * post_variances[-2]
 
         for j in range(num_samples-2, 0, -1):
             M[j] = post_variances[j] * S[j-1] + S[j] * (M[j+1] - post_variances[j]) * S[j-1]
