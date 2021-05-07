@@ -13,9 +13,9 @@ class CustomKF:
     R, process noise variance
     delta, measurement noise/error
     '''
-    def __init__(self, process_noise, sigma):
+    def __init__(self, process_noise, sigma_square):
         self.R = process_noise
-        self.sigma = sigma
+        self.sigma_square = sigma_square
 
     def predict_step(self, prev_mean, prev_variance):
         prior_mean = prev_mean
@@ -38,7 +38,7 @@ class CustomKF:
         post_variances = []
 
         for i in range(len(z)):
-            Q = (self.sigma ** 2) * del_t[i]
+            Q = self.sigma_square * del_t[i]
 
             prior_mean, prior_variance = self.predict_step(prev_mean, prev_variance)
             prior_means.append(prior_mean)

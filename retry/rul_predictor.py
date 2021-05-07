@@ -1,3 +1,5 @@
+from scipy.special import dawsn
+
 from customRTS import CustomRTS
 from customKF import CustomKF
 
@@ -23,11 +25,11 @@ class RULPredictor:
         self.del_t = None  # stores t[i] - t[i-1]
 
     def reading(self, yi, ti):
-        y.append(yi)
-        t.append(ti)
+        self.y.append(yi)
+        self.t.append(ti)
 
-        z.append(y[-1] - y[-2])
-        del_t.append(t[-1] - t[-2])
+        z.append(self.y[-1] - self.y[-2])
+        del_t.append(self.t[-1] - self.t[-2])
 
         # Update initial parameters
         self.η0_bar, self.V_η0, self.Q, self.σ_square = self.EM()
@@ -92,7 +94,23 @@ class RULPredictor:
         return η_0_bar, P_0, Q, σ_square
 
     def predict_RUL(self):
-        kf = customKF(self.Q, self.σ_square ** 0.5)  # TODO: check sigma
+        kf = customKF(self.Q, self.σ_square)
         η, P = kf.batch_filter(self.η_0_bar, self.P_0, self.z, self.del_t)
 
         return RULPredictor.calculate_RUL(self.w, η, P, self.y[-1])
+
+    @staticmethod
+    def calculate_RUL(w, η, P, y):
+        '''
+        ( sqrt(2)x(w - y_i) / sqrt(P_i|i) ) x D( η_i_cap / sqrt(2 x P_i|i) )
+        '''
+        
+        try:
+            D = dawsn(η / ((2 * P) ** 0.5))
+        except:
+            print(f"η_cap={η}")
+            print(f"P={self.P}")
+
+        rul = abs(((2**0.5) * (w - y) * D)/ (P**0.5))
+        
+        return rul
