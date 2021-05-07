@@ -71,10 +71,10 @@ class DataExtraction:
         for i in range(data.shape[0]) :
             distances[i] = self.md.distance(features[i, :])
 
-        mean =  np.mean(distances[:1500])
-        stddev = np.std(distances[:1500])
+        self.mean =  np.mean(distances[:1500])
+        self.stddev = np.std(distances[:1500])
 
-        self.MD_THRESHOLD = mean + 3 * stddev
+        self.MD_THRESHOLD = self.mean + 3 * self.stddev
         self.w = np.log(distances[index][0])
 
         # print(self.w, self.MD_THRESHOLD)
@@ -106,7 +106,7 @@ class DataExtraction:
 
         for i in range(data.shape[0]) :
             md_time[i, 0] = time[i]
-            md_time[i, 1] = self.md.distance(features[i, :])
+            md_time[i, 1] = np.log(np.absolute(self.md.distance(features[i, :]) - self.mean))
             # print(md_time[i, 1])
         
         if save_to_file and file_path is not None :
