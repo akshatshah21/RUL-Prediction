@@ -9,7 +9,7 @@ if __name__ == '__main__':
     data_extractor = DataExtraction()
     rp = RULPredictor()
 
-    data_extractor.set_md_threshold('../dataset/Learning_set/Bearing2_1/', mode='max')
+    data_extractor.set_md_threshold('../dataset/Learning_set/Bearing1_1/', mode='max')
     
     rp.w = data_extractor.w
     MD_MEAN = data_extractor.mean
@@ -22,7 +22,7 @@ if __name__ == '__main__':
     # MD_MEAN = 518767.90291495435
     
 
-    data = data_extractor.get_test_data('../dataset/Test_set/Bearing2_3/', mode='max', save_to_file=True, file_path='../my_data/test_data_2_3_wrt_2_1.npz')
+    data = data_extractor.get_test_data('../dataset/Test_set/Bearing1_3/', mode='max', save_to_file=True, file_path='my_data/test_data_1_3_wrt_1_1.npz')
     
     # data = data_extractor.get_test_data_from_file(file_path='../my_data/test_data.npz')
     # print(data.shape)

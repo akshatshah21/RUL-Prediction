@@ -35,7 +35,16 @@ def time_domain_features(a) :
     
     stddev = np.sqrt( (np.cumsum(squared_a) / arange_a) -  (np.square(np.cumsum(a) / arange_a)) )
     stddev = stddev.reshape(-1, 1)
+
+    kurtosis = np.zeros((a.shape[0], 1))
+    for i in range(a.shape[0]):
+        subarr = a[0:i+1]
+        # kurtosis[i] = (np.sum((subarr - mean[i]) ** 4)) / (i+1)
+        kurtosis[i] = stats.kurtosis(subarr)
    
+
+    kurtosisfactor = kurtosis / (EPSILON + (stddev ** 4))
+
     waveformfactor =  rms / (EPSILON + absmean)
     
     crestfactor =  peaktopeak / (EPSILON + rms)
@@ -45,7 +54,7 @@ def time_domain_features(a) :
     clearancefactor =  peaktopeak / (EPSILON + rms)
     
     res = np.concatenate((max, min, absmean, mean, rms, smr, peaktopeak, 
-                          stddev, waveformfactor, crestfactor,
+                          stddev, kurtosis, kurtosisfactor, waveformfactor, crestfactor,
                           impactfactor, clearancefactor), axis=1)
 
     
