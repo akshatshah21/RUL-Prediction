@@ -2,8 +2,8 @@ import pandas as pd
 import numpy as np
 import os
 import matplotlib.pyplot as plt
-from feature_utils import time_domain_features
-from mahalanobis_distance import mahalanobis_distance
+from .feature_utils import time_domain_features
+from .mahalanobis_distance import mahalanobis_distance
 
 
 
@@ -107,7 +107,6 @@ class DataExtraction:
         for i in range(data.shape[0]) :
             md_time[i, 0] = time[i]
             md_time[i, 1] = self.md.distance(features[i, :])
-            # print(md_time[i, 1])
         
         if save_to_file and file_path is not None :
             np.savez_compressed(f'{file_path}', md_time)
@@ -154,10 +153,18 @@ class DataExtraction:
             print('test_data is None')
             return
 
+        # log(md-mean)
         distances = np.log(np.absolute(test_data[:, 1] - self.mean))
+
+        #  md - mean
         # distances =np.absolute(test_data[:, 1] - self.mean)
+
+        # log(md)
         # distances = np.log(test_data[:, 1])
+        
+        # md
         # distances = test_data[:, 1]
+        
         plt.plot(distances)
         plt.xlabel("Samples")
         plt.ylabel("MD values")

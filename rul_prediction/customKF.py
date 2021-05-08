@@ -23,7 +23,6 @@ class CustomKF:
         return prior_mean, prior_variance
 
     def correct_step(self, prior_mean, prior_variance, C, Q, observation): 
-        # print("KF correct step:", observation, Q, C)       
         K = (prior_variance * C) / (C * prior_variance * C + Q)
         post_mean = prior_mean + K * (observation - C * prior_mean)
         post_variance = (1 - K * C) * prior_variance
@@ -45,13 +44,10 @@ class CustomKF:
             prior_means.append(prior_mean)
             prior_variances.append(prior_variance)
 
-            # print("KF: prior mean", prior_mean, "prior variance", prior_variance)
-
             post_mean, post_variance = self.correct_step(prior_mean, prior_variance, C=del_t[i], Q=Q, observation=z[i])
             post_means.append(post_mean)
             post_variances.append(post_variance)
 
-            # print("KF: post mean", post_mean, "post variance", post_variance)
             prev_mean = post_mean
             prev_variance = post_variance
 

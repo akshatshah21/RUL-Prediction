@@ -1,5 +1,5 @@
 import numpy as np
-from customKF import CustomKF
+from .customKF import CustomKF
 
 class CustomRTS():
     def __init__(self, z, del_t):
@@ -11,7 +11,6 @@ class CustomRTS():
         kf = CustomKF(Q, sigma_square)
         prior_means, prior_variances, post_means, post_variances = kf.batch_filter(initial_mean, initial_variance, self.z, self.del_t)
 
-        # print("RTS: ", post_means, post_variances)
         num_samples = len(self.z)
 
         # Smoother

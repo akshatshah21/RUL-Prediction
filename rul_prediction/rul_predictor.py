@@ -1,30 +1,30 @@
 from scipy.special import dawsn
 import numpy as np
 from matplotlib import pyplot as plt
-from customRTS import CustomRTS
-from customKF import CustomKF
+from .customRTS import CustomRTS
+from .customKF import CustomKF
 import sys
 
 class RULPredictor:
     def __init__(self, debug=False):
 
-        self.w = None  # Threshold for failure
+        self.w = None               # Threshold for failure
 
         # Initial Parameters (Theta)
-        self.η_0_bar = 0.0001  # Initial mean of drift coefficient
-        self.P_0 = 1.001  # Initial variance of drift coefficient
-        self.σ_square = 1.001  # Part of measurement noise variance
-        self.Q = 1.001  # Process variance
+        self.η_0_bar = 0.0001       # Initial mean of drift coefficient
+        self.P_0 = 1.001            # Initial variance of drift coefficient
+        self.σ_square = 1.001       # Part of measurement noise variance
+        self.Q = 1.001              # Process variance
 
-        self.EM_ITER = 100  # Max iterations for EM
+        self.EM_ITER = 100          # Max iterations for EM
 
         # Readings
         self.y = [0]
         self.t = [0]
         self.num_samples = 0
 
-        self.z = []  # stores y[i] - y[i-1]
-        self.del_t = []  # stores t[i] - t[i-1]
+        self.z = []                 # stores y[i] - y[i-1]
+        self.del_t = []             # stores t[i] - t[i-1]
 
         self.debug = debug
 
@@ -47,11 +47,10 @@ class RULPredictor:
         σ_square = self.σ_square
         likelihoods = list()
 
-        for k in range(self.EM_ITER):
+        for _ in range(self.EM_ITER):
             rts = CustomRTS(self.z, self.del_t)
             expected_η, expected_η_square, expected_η_η_1 = rts.run(η_0_bar, P_0, Q, σ_square)
 
-            # print("EM P", P_0)        
             # E part
             t1 = np.log(P_0)
             t2 = (expected_η_square[0] - 2 * expected_η[0] * η_0_bar + η_0_bar ** 2) / P_0
@@ -77,11 +76,6 @@ class RULPredictor:
 
             η_0_bar = expected_η[0]
             
-            # print("expected_η_sq[0]", expected_η_square[0])
-            # print("expected_η[0]", expected_η[0])
-            if np.isnan(expected_η[0]):
-                print("AAAAAAAAAAAAAAAAAAAA")
-                sys.exit(1)
             P_0 = expected_η_square[0] - (expected_η[0] ** 2)
             Q = f3 / self.num_samples
             σ_square = f4 / self.num_samples
@@ -94,14 +88,13 @@ class RULPredictor:
                 print("sigma square: ", σ_square)
                 print()
 
-        # print(η_0_bar, P_0, Q, σ_square)
-        print("likelihoods: ", np.mean(likelihoods))
+        
         if self.debug:
-            print("likelihoods: ", likelihoods)
+            print("likelihood: ", np.mean(likelihoods))
 
             plt.plot(likelihoods)
             plt.xlabel("EM Iteration")
-            plt.ylabel("Likelihoods in unknown units")
+            plt.ylabel("Likelihood")
             plt.grid()
             plt.show()
 

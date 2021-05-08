@@ -1,11 +1,7 @@
 # Helper functions for 14 time domain features calculation
 
 import numpy as np
-import pandas as pd
-import math
 from scipy import stats
-from matplotlib import pyplot as plt
-import time
 
 EPSILON = 1e-15
 
@@ -39,7 +35,6 @@ def time_domain_features(a) :
     kurtosis = np.zeros((a.shape[0], 1))
     for i in range(a.shape[0]):
         subarr = a[0:i+1]
-        # kurtosis[i] = (np.sum((subarr - mean[i]) ** 4)) / (i+1)
         kurtosis[i] = stats.kurtosis(subarr)
    
 
