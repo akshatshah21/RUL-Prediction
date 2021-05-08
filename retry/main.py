@@ -46,10 +46,27 @@ if __name__ == '__main__':
             pred_times.append(it)
             pred_ruls.append(rul)
         it += 1
-        
 
-    plt.plot(pred_times, pred_ruls)
+    # Actual RUL
+    actual_ruls = [*range(pred_times[-1]-pred_times[0], -1, -1)]
+    actual_ruls = list(map(lambda x: x*10, actual_ruls))    # since time between two files is 10s
+
+    plt.plot(pred_times, actual_ruls, label='Actual')
+    plt.plot(pred_times, pred_ruls, label='Predicted')
     plt.xlabel("Sample number")
-    plt.ylabel("RUL in seconds?")
+    plt.ylabel("RUL in seconds")
+    plt.legend()
+    plt.title("Bearing1_1 RUL Plot")
+    plt.grid()
+    plt.show()
+
+
+    # Error Plot
+    error = list(np.array(actual_ruls) - np.array(pred_ruls))
+    plt.plot(pred_times, error, label='Error')
+    plt.xlabel("Sample number")
+    plt.ylabel("Tracking error")
+    plt.legend()
+    plt.title("Bearing1_1 Error plot")
     plt.grid()
     plt.show()

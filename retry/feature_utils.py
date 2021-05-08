@@ -43,7 +43,7 @@ def time_domain_features(a) :
         kurtosis[i] = stats.kurtosis(subarr)
    
 
-    kurtosisfactor = kurtosis / (EPSILON + (stddev ** 4))
+    # kurtosisfactor = kurtosis / (EPSILON + (stddev ** 4))
 
     waveformfactor =  rms / (EPSILON + absmean)
     
@@ -54,7 +54,7 @@ def time_domain_features(a) :
     clearancefactor =  peaktopeak / (EPSILON + rms)
     
     res = np.concatenate((max, min, absmean, mean, rms, smr, peaktopeak, 
-                          stddev, kurtosis, kurtosisfactor, waveformfactor, crestfactor,
+                          stddev, kurtosis, waveformfactor, crestfactor,
                           impactfactor, clearancefactor), axis=1)
 
     
