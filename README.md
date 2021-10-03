@@ -7,8 +7,8 @@ This is a solution to the <a href="https://www.scribd.com/document/427205852/IEE
 We use a two-stage process for predicting the RUL using a single statistic derived from 14 time-domain features of the observed vibration signals by modelling the degradation process as a Wiener process and continuously updating prior parameters of the underlying linear state-space model of degradation.
 
 - Multiple time-domain features were fused into one index by calculating the <b>Mahalanobis distance</b> from a known healthy state.
-- The <b>Weiner process</b> was used to model the degradation process of the ball bearings
-- The Mean and Variance of the drift coefficient used Weiner process was predicted using the <b>Kalman filter</b>
+- The <b>Wiener process</b> was used to model the degradation process of the ball bearings
+- The Mean and Variance of the drift coefficient used Wiener process was predicted using the <b>Kalman filter</b>
 - The <b>Expectation Maximization (EM) algorithm</b> was used to estimate the unknown parameters which in turn are used in the Kalman Filter
 - <b>Rauch-Tung-Striebel (RTS) Smoother</b> is used for fixed interval smoothing, taking into consideration both, the past and future values to predict the current one.
 
